@@ -905,6 +905,7 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
                 break;
         }
         // find a bot fit conditions and not in any guild
+
         auto botDatabaseName = PlayerbotsDatabase.GetConnectionInfo()->database;
 
         QueryResult results = CharacterDatabase.Query("SELECT guid FROM characters "
