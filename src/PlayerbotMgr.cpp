@@ -845,7 +845,7 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
         if (GET_PLAYERBOT_AI(master))
         {
             messages.push_back("Disable player botAI");
-            DisablePlayerBot(master->GetGUID());
+            delete GET_PLAYERBOT_AI(master);
         }
         else if (sPlayerbotAIConfig->selfBotLevel == 0)
             messages.push_back("Self-bot is disabled");
@@ -854,7 +854,8 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
         else
         {
             messages.push_back("Enable player botAI");
-            OnBotLogin(master);
+            sPlayerbotsMgr->AddPlayerbotData(master, true);
+            GET_PLAYERBOT_AI(master)->SetMaster(master);
         }
 
         return messages;
@@ -941,6 +942,7 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
                 race_limit = "2, 5, 6, 8, 10";
                 break;
         }
+        uint32 maxAccountId = sPlayerbotAIConfig->randomBotAccounts.back();
         // find a bot fit conditions and not in any guild
 
         auto botDatabaseName = PlayerbotsDatabase.GetConnectionInfo()->database;
@@ -954,10 +956,10 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
             ObjectGuid guid = ObjectGuid(HighGuid::Player, fields[0].Get<uint32>());
             AddPlayerBot(guid, master->GetSession()->GetAccountId());
 
-            messages.push_back("addclass " + std::string(charname) + " ok");
+            messages.push_back("Add class " + std::string(charname));
             return messages;
         }
-        messages.push_back("addclass failed.");
+        messages.push_back("Add class failed.");
         return messages;
     }
 
@@ -1220,7 +1222,7 @@ PlayerbotMgr::PlayerbotMgr(Player* const master) : PlayerbotHolder(),  master(ma
 PlayerbotMgr::~PlayerbotMgr()
 {
     if (master)
-        sPlayerbotsMgr->RemovePlayerBotData(master->GetGUID());
+        sPlayerbotsMgr->RemovePlayerBotData(master->GetGUID(), false);
 }
 
 void PlayerbotMgr::UpdateAIInternal(uint32 elapsed, bool /*minimal*/)
@@ -1433,31 +1435,45 @@ void PlayerbotsMgr::AddPlayerbotData(Player* player, bool isBotAI)
         return;
     }
     // If the guid already exists in the map, remove it
-    std::unordered_map<ObjectGuid, PlayerbotAIBase*>::iterator itr = _playerbotsMap.find(player->GetGUID());
-    if (itr != _playerbotsMap.end())
-    {
-        _playerbotsMap.erase(itr);
-    }
+    
     if (!isBotAI)
     {
+        std::unordered_map<ObjectGuid, PlayerbotAIBase*>::iterator itr = _playerbotsMgrMap.find(player->GetGUID());
+        if (itr != _playerbotsMgrMap.end())
+        {
+            _playerbotsMgrMap.erase(itr);
+        }
         PlayerbotMgr* playerbotMgr = new PlayerbotMgr(player);
-        ASSERT(_playerbotsMap.emplace(player->GetGUID(), playerbotMgr).second);
+        ASSERT(_playerbotsMgrMap.emplace(player->GetGUID(), playerbotMgr).second);
 
         playerbotMgr->OnPlayerLogin(player);
     }
     else
     {
+        std::unordered_map<ObjectGuid, PlayerbotAIBase*>::iterator itr = _playerbotsAIMap.find(player->GetGUID());
+        if (itr != _playerbotsAIMap.end())
+        {
+            _playerbotsAIMap.erase(itr);
+        }
         PlayerbotAI* botAI = new PlayerbotAI(player);
-        ASSERT(_playerbotsMap.emplace(player->GetGUID(), botAI).second);
+        ASSERT(_playerbotsAIMap.emplace(player->GetGUID(), botAI).second);
     }
 }
 
-void PlayerbotsMgr::RemovePlayerBotData(ObjectGuid const& guid)
+void PlayerbotsMgr::RemovePlayerBotData(ObjectGuid const& guid, bool is_AI)
 {
-    std::unordered_map<ObjectGuid, PlayerbotAIBase*>::iterator itr = _playerbotsMap.find(guid);
-    if (itr != _playerbotsMap.end())
-    {
-        _playerbotsMap.erase(itr);
+    if (is_AI) {
+        std::unordered_map<ObjectGuid, PlayerbotAIBase*>::iterator itr = _playerbotsAIMap.find(guid);
+        if (itr != _playerbotsAIMap.end())
+        {
+            _playerbotsAIMap.erase(itr);
+        }
+    } else {
+        std::unordered_map<ObjectGuid, PlayerbotAIBase*>::iterator itr = _playerbotsMgrMap.find(guid);
+        if (itr != _playerbotsMgrMap.end())
+        {
+            _playerbotsMgrMap.erase(itr);
+        }
     }
 }
 
@@ -1470,8 +1486,8 @@ PlayerbotAI* PlayerbotsMgr::GetPlayerbotAI(Player* player)
     // if (player->GetSession()->isLogingOut() || player->IsDuringRemoveFromWorld()) {
     //     return nullptr;
     // }
-    auto itr = _playerbotsMap.find(player->GetGUID());
-    if (itr != _playerbotsMap.end())
+    auto itr = _playerbotsAIMap.find(player->GetGUID());
+    if (itr != _playerbotsAIMap.end())
     {
         if (itr->second->IsBotAI())
             return reinterpret_cast<PlayerbotAI*>(itr->second);
@@ -1486,8 +1502,8 @@ PlayerbotMgr* PlayerbotsMgr::GetPlayerbotMgr(Player* player)
     {
         return nullptr;
     }
-    auto itr = _playerbotsMap.find(player->GetGUID());
-    if (itr != _playerbotsMap.end())
+    auto itr = _playerbotsMgrMap.find(player->GetGUID());
+    if (itr != _playerbotsMgrMap.end())
     {
         if (!itr->second->IsBotAI())
             return reinterpret_cast<PlayerbotMgr*>(itr->second);
