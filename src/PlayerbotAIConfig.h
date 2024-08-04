@@ -145,6 +145,7 @@ class PlayerbotAIConfig
         uint32 rotationPoolSize;
         bool gearscorecheck;
         bool randomBotPreQuests;
+        bool allowMoneyTrade;
 
         bool guildTaskEnabled;
         uint32 minGuildTaskChangeTime, maxGuildTaskChangeTime;

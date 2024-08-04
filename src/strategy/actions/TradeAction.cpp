@@ -40,7 +40,7 @@ bool TradeAction::Execute(Event event)
     }
 
     uint32 copper = chat->parseMoney(text);
-    if (copper > 0)
+    if (copper > 0 && sPlayerbotAIConfig->allowMoneyTrade)
     {
         WorldPacket packet(CMSG_SET_TRADE_GOLD, 4);
         packet << copper;

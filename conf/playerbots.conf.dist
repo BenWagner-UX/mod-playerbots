@@ -468,6 +468,10 @@ AiPlayerbot.RandomBotJoinLfg = 1
 # Need to reset rndbot after changing the setting (.playerbot rndbot reset)
 AiPlayerbot.DisableDeathKnightLogin = 0
 
+
+# Enable or disable item trade against money (to avoid exploits)
+AiPlayerbot.AllowMoneyTrade = true
+
 #
 #
 #
