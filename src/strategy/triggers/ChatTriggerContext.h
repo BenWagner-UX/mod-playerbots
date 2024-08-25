@@ -77,6 +77,8 @@ public:
         creators["grind"] = &ChatTriggerContext::grind;
         creators["tank attack"] = &ChatTriggerContext::tank_attack;
         creators["talk"] = &ChatTriggerContext::talk;
+        creators["enter vehicle"] = &ChatTriggerContext::enter_vehicle;
+        creators["leave vehicle"] = &ChatTriggerContext::leave_vehicle;
         creators["cast"] = &ChatTriggerContext::cast;
         creators["castnc"] = &ChatTriggerContext::castnc;
         creators["invite"] = &ChatTriggerContext::invite;
@@ -121,6 +123,7 @@ public:
         creators["bwl"] = &ChatTriggerContext::bwl;
         creators["dps"] = &ChatTriggerContext::dps;
         creators["disperse"] = &ChatTriggerContext::disperse;
+        creators["calc"] = &ChatTriggerContext::calc;
     }
 
 private:
@@ -154,6 +157,8 @@ private:
     static Trigger* cast(PlayerbotAI* botAI) { return new ChatCommandTrigger(botAI, "cast"); }
     static Trigger* castnc(PlayerbotAI* botAI) { return new ChatCommandTrigger(botAI, "castnc"); }
     static Trigger* talk(PlayerbotAI* botAI) { return new ChatCommandTrigger(botAI, "talk"); }
+    static Trigger* enter_vehicle(PlayerbotAI* botAI) { return new ChatCommandTrigger(botAI, "enter vehicle"); }
+    static Trigger* leave_vehicle(PlayerbotAI* botAI) { return new ChatCommandTrigger(botAI, "leave vehicle"); }
     static Trigger* flee(PlayerbotAI* botAI) { return new ChatCommandTrigger(botAI, "flee"); }
     static Trigger* grind(PlayerbotAI* botAI) { return new ChatCommandTrigger(botAI, "grind"); }
     static Trigger* tank_attack(PlayerbotAI* botAI) { return new ChatCommandTrigger(botAI, "tank attack"); }
@@ -221,6 +226,7 @@ private:
     static Trigger* bwl(PlayerbotAI* ai) { return new ChatCommandTrigger(ai, "bwl"); }
     static Trigger* dps(PlayerbotAI* ai) { return new ChatCommandTrigger(ai, "dps"); }
     static Trigger* disperse(PlayerbotAI* ai) { return new ChatCommandTrigger(ai, "disperse"); }
+    static Trigger* calc(PlayerbotAI* ai) { return new ChatCommandTrigger(ai, "calc"); }
 };
 
 #endif

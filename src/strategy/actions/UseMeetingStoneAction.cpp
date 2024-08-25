@@ -79,15 +79,13 @@ bool SummonAction::Execute(Event event)
 
     if (Pet* pet = bot->GetPet())
     {
-        pet->SetReactState(REACT_PASSIVE);
-        pet->GetCharmInfo()->SetIsCommandFollow(true);
-        pet->GetCharmInfo()->IsReturning();
+        botAI->PetFollow();
     }
 
     if (master->GetSession()->GetSecurity() >= SEC_PLAYER)
     {
         // botAI->GetAiObjectContext()->GetValue<GuidVector>("prioritized targets")->Set({});
-        SET_AI_VALUE(std::list<FleeInfo>, "recently flee info", {});
+        AI_VALUE(std::list<FleeInfo>&, "recently flee info").clear();
         return Teleport(master, bot);
     }
 
@@ -177,6 +175,12 @@ bool SummonAction::Teleport(Player* summoner, Player* player)
     //         }
     //     }
     // }
+    if (player->GetVehicle())
+    {
+        botAI->TellError("You cannot summon me while I'm on a vehicle");
+        return false;
+    }
+
     if (!summoner->IsBeingTeleported() && !player->IsBeingTeleported())
     {
         float followAngle = GetFollowAngle();
@@ -215,13 +219,16 @@ bool SummonAction::Teleport(Player* summoner, Player* player)
                 bool revive =
                     sPlayerbotAIConfig->reviveBotWhenSummoned == 2 ||
                     (sPlayerbotAIConfig->reviveBotWhenSummoned == 1 && !master->IsInCombat() && master->IsAlive());
+
                 if (bot->isDead() && revive)
                 {
                     bot->ResurrectPlayer(1.0f, false);
                     botAI->TellMasterNoFacing("I live, again!");
+                    botAI->GetAiObjectContext()->GetValue<GuidVector>("prioritized targets")->Set({});
                 }
 
                 player->GetMotionMaster()->Clear();
+                AI_VALUE(LastMovement&, "last movement").clear();
                 player->TeleportTo(mapId, x, y, z, 0);
                 return true;
             }

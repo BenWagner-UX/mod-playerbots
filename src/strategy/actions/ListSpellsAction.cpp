@@ -139,11 +139,17 @@ std::vector<std::pair<uint32, std::string>> ListSpellsAction::GetSpellList(std::
     {
         if (itr->second->State == PLAYERSPELL_REMOVED || !itr->second->Active)
             continue;
+        
+        if (!(itr->second->specMask & bot->GetActiveSpecMask()))
+            continue;
 
         SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(itr->first);
         if (!spellInfo)
             continue;
-
+        
+        if (spellInfo->IsPassive())
+            continue;
+        
         SkillLineAbilityEntry const* skillLine = skillSpells[itr->first];
         if (skill != SKILL_NONE && (!skillLine || skillLine->SkillLine != skill))
             continue;
