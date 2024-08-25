@@ -443,6 +443,7 @@ bool PlayerbotAIConfig::Initialize()
     rotationPoolSize = sConfigMgr->GetOption<int32>("AiPlayerbot.RotationPoolSize", 500);
     gearscorecheck = sConfigMgr->GetOption<bool>("AiPlayerbot.GearScoreCheck", false);
     randomBotPreQuests = sConfigMgr->GetOption<bool>("AiPlayerbot.PreQuests", true);
+    allowMoneyTrade = sConfigMgr->GetOption<bool>("AiPlayerbot.AllowMoneyTrade", true);
 
     // SPP automation
     freeMethodLoot = sConfigMgr->GetOption<bool>("AiPlayerbot.FreeMethodLoot", false);

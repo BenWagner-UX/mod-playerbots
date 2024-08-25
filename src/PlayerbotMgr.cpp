@@ -635,8 +635,11 @@ std::string const PlayerbotHolder::ProcessBotCommand(std::string const cmd, Obje
         if (ObjectAccessor::FindPlayer(guid))
             return "player already logged in";
 
-        if (!sPlayerbotAIConfig->allowPlayerBots && !isRandomAccount && !isMasterAccount)
-            return "You cannot login another player's character as bot.";
+        if (!admin)
+        {
+            if (!sPlayerbotAIConfig->allowPlayerBots && !isRandomAccount && !isMasterAccount)
+                return "You cannot login another player's character as bot.";
+        }
 
         AddPlayerBot(guid, masterAccountId);
         return "ok";
@@ -662,8 +665,7 @@ std::string const PlayerbotHolder::ProcessBotCommand(std::string const cmd, Obje
     if (!bot)
         return "bot not found";
 
-    if (!isRandomAccount || isRandomBot)
-    {
+    if (!admin && (!isRandomAccount || isRandomBot)) {
         return "ERROR: You can not use this command on non-summoned random bot.";
     }
 
@@ -1024,13 +1026,16 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
         }
         uint32 maxAccountId = sPlayerbotAIConfig->randomBotAccounts.back();
         // find a bot fit conditions and not in any guild
+        auto botDatabaseName = PlayerbotsDatabase.GetConnectionInfo()->database;
+
         QueryResult results = CharacterDatabase.Query(
             "SELECT guid FROM characters "
-            "WHERE name IN (SELECT name FROM playerbots_names) AND class = '{}' AND online = 0 AND race IN ({}) AND "
+            "WHERE name IN (SELECT name FROM {}.playerbots_names) AND class = '{}' AND online = 0 AND race IN ({}) AND "
             "guid NOT IN ( SELECT guid FROM guild_member ) "
             "AND account <= {} "
             "ORDER BY account DESC LIMIT 1",
-            claz, race_limit, maxAccountId);
+            botDatabaseName, claz, race_limit, maxAccountId);
+
         if (results)
         {
             Field* fields = results->Fetch();

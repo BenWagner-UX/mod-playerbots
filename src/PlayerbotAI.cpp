@@ -354,6 +354,43 @@ void PlayerbotAI::UpdateAIInternal([[maybe_unused]] uint32 elapsed, bool minimal
         sPerformanceMonitor->start(PERF_MON_TOTAL, "PlayerbotAI::UpdateAIInternal " + mapString);
     ExternalEventHelper helper(aiObjectContext);
 
+    std::vector<ChatCommandHolder> delayed;
+    while (!chatCommands.empty())
+    {
+        ChatCommandHolder holder = chatCommands.front();
+        time_t checkTime = holder.GetTime();
+        if (checkTime && time(nullptr) < checkTime)
+        {
+            delayed.push_back(holder);
+            chatCommands.pop();
+            continue;
+        }
+
+        std::string const command = holder.GetCommand();
+        Player* owner = holder.GetOwner();
+        if (!helper.ParseChatCommand(command, owner) && holder.GetType() == CHAT_MSG_WHISPER)
+        {
+            // To prevent spam caused by WIM
+            if (!(command.rfind("WIM", 0) == 0) &&
+                !(command.rfind("QHpr", 0) == 0)
+                )
+            {
+                std::ostringstream out;
+                out << "Unknown command " << command;
+                TellMaster(out);
+                helper.ParseChatCommand("help");
+            }
+          
+        }
+
+        chatCommands.pop();
+    }
+
+    for (std::vector<ChatCommandHolder>::iterator i = delayed.begin(); i != delayed.end(); ++i)
+    {
+        chatCommands.push(*i);
+    }
+
     // chat replies
     for (auto it = chatReplies.begin(); it != chatReplies.end();)
     {
@@ -5536,269 +5573,4 @@ uint8 PlayerbotAI::FindEquipSlot(ItemTemplate const* proto, uint32 slot, bool sw
 
     // no free position
     return NULL_SLOT;
-}
-
-bool PlayerbotAI::IsSafe(Player* player)
-{
-    return player && player->GetMapId() == bot->GetMapId() && player->GetInstanceId() == bot->GetInstanceId() &&
-           !player->IsBeingTeleported();
-}
-bool PlayerbotAI::IsSafe(WorldObject* obj)
-{
-    return obj && obj->GetMapId() == bot->GetMapId() && obj->GetInstanceId() == bot->GetInstanceId() &&
-           (!obj->IsPlayer() || !((Player*)obj)->IsBeingTeleported());
-}
-ChatChannelSource PlayerbotAI::GetChatChannelSource(Player* bot, uint32 type, std::string channelName)
-{
-    if (type == CHAT_MSG_CHANNEL)
-    {
-        if (channelName == "World")
-            return ChatChannelSource::SRC_WORLD;
-        else
-        {
-            ChannelMgr* cMgr = ChannelMgr::forTeam(bot->GetTeamId());
-            if (!cMgr)
-            {
-                return ChatChannelSource::SRC_UNDEFINED;
-            }
-
-            const Channel* channel = cMgr->GetChannel(channelName, bot);
-            if (channel)
-            {
-                switch (channel->GetChannelId())
-                {
-                    case ChatChannelId::GENERAL:
-                    {
-                        return ChatChannelSource::SRC_GENERAL;
-                    }
-                    case ChatChannelId::TRADE:
-                    {
-                        return ChatChannelSource::SRC_TRADE;
-                    }
-                    case ChatChannelId::LOCAL_DEFENSE:
-                    {
-                        return ChatChannelSource::SRC_LOCAL_DEFENSE;
-                    }
-                    case ChatChannelId::WORLD_DEFENSE:
-                    {
-                        return ChatChannelSource::SRC_WORLD_DEFENSE;
-                    }
-                    case ChatChannelId::LOOKING_FOR_GROUP:
-                    {
-                        return ChatChannelSource::SRC_LOOKING_FOR_GROUP;
-                    }
-                    case ChatChannelId::GUILD_RECRUITMENT:
-                    {
-                        return ChatChannelSource::SRC_GUILD_RECRUITMENT;
-                    }
-                    default:
-                    {
-                        return ChatChannelSource::SRC_UNDEFINED;
-                    }
-                }
-            }
-        }
-    }
-    else
-    {
-        switch (type)
-        {
-            case CHAT_MSG_WHISPER:
-            {
-                return ChatChannelSource::SRC_WHISPER;
-            }
-            case CHAT_MSG_SAY:
-            {
-                return ChatChannelSource::SRC_SAY;
-            }
-            case CHAT_MSG_YELL:
-            {
-                return ChatChannelSource::SRC_YELL;
-            }
-            case CHAT_MSG_GUILD:
-            {
-                return ChatChannelSource::SRC_GUILD;
-            }
-            case CHAT_MSG_PARTY:
-            {
-                return ChatChannelSource::SRC_PARTY;
-            }
-            case CHAT_MSG_RAID:
-            {
-                return ChatChannelSource::SRC_RAID;
-            }
-            case CHAT_MSG_EMOTE:
-            {
-                return ChatChannelSource::SRC_EMOTE;
-            }
-            case CHAT_MSG_TEXT_EMOTE:
-            {
-                return ChatChannelSource::SRC_TEXT_EMOTE;
-            }
-            default:
-            {
-                return ChatChannelSource::SRC_UNDEFINED;
-            }
-        }
-    }
-    return ChatChannelSource::SRC_UNDEFINED;
-}
-
-std::vector<const Quest*> PlayerbotAI::GetAllCurrentQuests()
-{
-    std::vector<const Quest*> result;
-
-    for (uint16 slot = 0; slot < MAX_QUEST_LOG_SIZE; ++slot)
-    {
-        uint32 questId = bot->GetQuestSlotQuestId(slot);
-        if (!questId)
-        {
-            continue;
-        }
-
-        result.push_back(sObjectMgr->GetQuestTemplate(questId));
-    }
-
-    return result;
-}
-
-std::vector<const Quest*> PlayerbotAI::GetCurrentIncompleteQuests()
-{
-    std::vector<const Quest*> result;
-
-    for (uint16 slot = 0; slot < MAX_QUEST_LOG_SIZE; ++slot)
-    {
-        uint32 questId = bot->GetQuestSlotQuestId(slot);
-        if (!questId)
-        {
-            continue;
-        }
-
-        QuestStatus status = bot->GetQuestStatus(questId);
-        if (status == QUEST_STATUS_INCOMPLETE || status == QUEST_STATUS_NONE)
-        {
-            result.push_back(sObjectMgr->GetQuestTemplate(questId));
-        }
-    }
-
-    return result;
-}
-
-std::set<uint32> PlayerbotAI::GetAllCurrentQuestIds()
-{
-    std::set<uint32> result;
-
-    for (uint16 slot = 0; slot < MAX_QUEST_LOG_SIZE; ++slot)
-    {
-        uint32 questId = bot->GetQuestSlotQuestId(slot);
-        if (!questId)
-        {
-            continue;
-        }
-
-        result.insert(questId);
-    }
-
-    return result;
-}
-
-std::set<uint32> PlayerbotAI::GetCurrentIncompleteQuestIds()
-{
-    std::set<uint32> result;
-
-    for (uint16 slot = 0; slot < MAX_QUEST_LOG_SIZE; ++slot)
-    {
-        uint32 questId = bot->GetQuestSlotQuestId(slot);
-        if (!questId)
-        {
-            continue;
-        }
-
-        QuestStatus status = bot->GetQuestStatus(questId);
-        if (status == QUEST_STATUS_INCOMPLETE || status == QUEST_STATUS_NONE)
-        {
-            result.insert(questId);
-        }
-    }
-
-    return result;
-}
-
-uint32 PlayerbotAI::GetReactDelay()
-{
-    uint32 base = sPlayerbotAIConfig->reactDelay;
-    // old calculate method
-    if (!sPlayerbotAIConfig->dynamicReactDelay)
-    {
-        inCombat = bot->IsInCombat();
-        bool min = false;
-        // test fix lags because of BG
-        bool inBG = bot->InBattleground() || bot->InArena();
-        if (bot && !inCombat)
-            min = true;
-
-        if (HasRealPlayerMaster() || (sPlayerbotAIConfig->fastReactInBG && inBG))
-            min = false;
-        if (min)
-            return base * 10;
-
-        return base;
-    }
-
-    float multiplier = 1.0f;
-
-    if (HasRealPlayerMaster())
-    {
-        multiplier = 1.0f;
-        return base * multiplier;
-    }
-
-    bool inBg = bot->InBattleground() || bot->InArena();
-    if (inBg)
-    {
-        multiplier = sPlayerbotAIConfig->fastReactInBG ? 1.0f : 10.0f;
-        return base * multiplier;
-    }
-
-    if (bot->IsInCombat() || currentState == BOT_STATE_COMBAT)
-    {
-        multiplier = 5.0f;
-        return base * multiplier;
-    }
-
-    bool isResting = bot->HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_RESTING);
-    if (!isResting)
-    {
-        multiplier = urand(10, 30);
-        return base * multiplier;
-    }
-
-    multiplier = urand(20, 200);
-    return base * multiplier;
-}
-
-void PlayerbotAI::PetFollow()
-{
-    Pet* pet = bot->GetPet();
-    if (!pet)
-        return;
-    pet->AttackStop();
-    pet->InterruptNonMeleeSpells(false);
-    pet->ClearInPetCombat();
-    pet->GetMotionMaster()->MoveFollow(bot, PET_FOLLOW_DIST, pet->GetFollowAngle());
-    if (pet->ToPet())
-        pet->ToPet()->ClearCastWhenWillAvailable();
-    CharmInfo* charmInfo = pet->GetCharmInfo();
-    if (!charmInfo)
-        return;
-    charmInfo->SetCommandState(COMMAND_FOLLOW);
-
-    charmInfo->SetIsCommandAttack(false);
-    charmInfo->SetIsAtStay(false);
-    charmInfo->SetIsReturning(true);
-    charmInfo->SetIsCommandFollow(true);
-    charmInfo->SetIsFollowing(false);
-    charmInfo->RemoveStayPosition();
-    charmInfo->SetForcedSpell(0);
-    charmInfo->SetForcedTargetGUID();
 }

@@ -211,16 +211,17 @@ public:
     std::vector<uint32> pvpProhibitedAreaIds;
     bool fastReactInBG;
 
-    bool randombotsWalkingRPG;
-    bool randombotsWalkingRPGInDoors;
-    uint32 minEnchantingBotLevel;
-    uint32 limitEnchantExpansion;
-    uint32 limitGearExpansion;
-    uint32 randombotStartingLevel;
-    bool enableRotation;
-    uint32 rotationPoolSize;
-    bool gearscorecheck;
-    bool randomBotPreQuests;
+        bool randombotsWalkingRPG;
+        bool randombotsWalkingRPGInDoors;
+        uint32 minEnchantingBotLevel;
+        uint32 limitEnchantExpansion;
+        uint32 limitGearExpansion;
+        uint32 randombotStartingLevel;
+        bool enableRotation;
+        uint32 rotationPoolSize;
+        bool gearscorecheck;
+        bool randomBotPreQuests;
+        bool allowMoneyTrade;
 
     bool guildTaskEnabled;
     uint32 minGuildTaskChangeTime, maxGuildTaskChangeTime;
